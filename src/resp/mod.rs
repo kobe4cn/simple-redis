@@ -53,10 +53,12 @@ pub enum RespError {
     ParseIntError(#[from] std::num::ParseIntError),
     #[error("parse float error: {0}")]
     ParseFloatError(#[from] std::num::ParseFloatError),
+    #[error("CommandError: {0}")]
+    InvalidCommand(String),
 }
 
 #[enum_dispatch(RespEncoder)]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum RespFrame {
     SimpleString(SimpleString),
     Error(SimpleError),
@@ -71,25 +73,25 @@ pub enum RespFrame {
     Map(RespMap),
     Set(RespSet),
 }
-#[derive(Debug, PartialEq)]
-pub struct SimpleString(String);
-#[derive(Debug, PartialEq)]
-pub struct SimpleError(String);
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
+pub struct SimpleString(pub(crate) String);
+#[derive(Debug, PartialEq, Clone)]
+pub struct SimpleError(pub(crate) String);
+#[derive(Debug, PartialEq, Clone)]
 pub struct RespNullArray;
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct RespNull;
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct RespNullBulkString;
-#[derive(Debug, PartialEq)]
-pub struct BulkString(Vec<u8>);
-#[derive(Debug, PartialEq)]
-pub struct RespArray(Vec<RespFrame>);
-#[derive(Debug, PartialEq)]
-pub struct RespMap(BTreeMap<String, RespFrame>);
+#[derive(Debug, PartialEq, Clone)]
+pub struct BulkString(pub(crate) Vec<u8>);
+#[derive(Debug, PartialEq, Clone)]
+pub struct RespArray(pub(crate) Vec<RespFrame>);
+#[derive(Debug, PartialEq, Clone)]
+pub struct RespMap(pub(crate) BTreeMap<String, RespFrame>);
 
-#[derive(Debug, PartialEq)]
-pub struct RespSet(Vec<RespFrame>);
+#[derive(Debug, PartialEq, Clone)]
+pub struct RespSet(pub(crate) Vec<RespFrame>);
 
 impl Deref for SimpleString {
     type Target = String;
@@ -141,6 +143,16 @@ impl SimpleString {
     }
 }
 
+impl RespNull {
+    pub fn new() -> Self {
+        RespNull
+    }
+}
+impl Default for RespNull {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl SimpleError {
     pub fn new(s: impl Into<String>) -> Self {
         SimpleError(s.into())
@@ -195,6 +207,11 @@ impl From<Vec<RespFrame>> for RespArray {
 impl<const N: usize> From<&[u8; N]> for RespFrame {
     fn from(v: &[u8; N]) -> Self {
         BulkString(v.to_vec()).into()
+    }
+}
+impl<const N: usize> From<&[u8; N]> for BulkString {
+    fn from(v: &[u8; N]) -> Self {
+        BulkString(v.to_vec())
     }
 }
 

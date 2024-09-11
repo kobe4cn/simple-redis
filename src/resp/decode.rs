@@ -77,7 +77,7 @@ impl RespDecoder for RespFrame {
                 let frame = RespNull::decode(data)?;
                 Ok(frame.into())
             }
-
+            None => Err(RespError::NotComplete),
             _ => Err(RespError::InvalidFrameType(format!(
                 "Decode unknown frame type {:?}",
                 data
