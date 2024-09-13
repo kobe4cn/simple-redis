@@ -69,18 +69,19 @@ impl CommandExcetor for HGetAll {
             Some(v) => {
                 let mut result = Vec::new();
                 for v in v.iter() {
-                    result.push((v.key().to_owned(), v.value().clone()));
+                    result.push(RespFrame::BulkString(BulkString::new(v.key().to_owned())));
+                    result.push(v.value().clone());
                 }
                 // if self.sort {
                 //     result.sort_by(|a, b| a.0.cmp(&b.0));
                 // }
-                let ret = result
-                    .into_iter()
-                    .flat_map(|(k, v)| {
-                        vec![RespFrame::BulkString(BulkString::new(k.clone())), v.clone()]
-                    })
-                    .collect::<Vec<RespFrame>>();
-                RespArray::new(ret).into()
+                // let ret = result
+                //     .into_iter()
+                //     .flat_map(|(k, v)| {
+                //         vec![RespFrame::BulkString(BulkString::new(k.clone())), v.clone()]
+                //     })
+                //     .collect::<Vec<RespFrame>>();
+                RespArray::new(result).into()
             }
             None => RespFrame::Null(RespNull),
         }

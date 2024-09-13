@@ -41,6 +41,7 @@ impl<const N: usize> From<&[u8; N]> for BulkString {
         BulkString(v.to_vec())
     }
 }
+
 impl RespEncoder for BulkString {
     fn encode(&self) -> Vec<u8> {
         /*
