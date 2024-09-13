@@ -1,5 +1,7 @@
+mod echo;
 mod hmap;
 mod map;
+mod sismember;
 
 use crate::{Backend, RespArray, RespError, RespFrame, SimpleString};
 use anyhow::Result;
@@ -34,6 +36,26 @@ pub enum Command {
     Hset(HSet),
     HgetAll(HGetAll),
     Unrecognized(Unrecognized),
+    Echo(Echo),
+    HMget(HMget),
+    Sadd(Sadd),
+    Sismember(Sismember),
+}
+
+#[derive(Debug)]
+pub struct Sismember {
+    key: String,
+    member: String,
+}
+#[derive(Debug)]
+pub struct Sadd {
+    key: String,
+    members: Vec<String>,
+}
+#[derive(Debug)]
+pub struct HMget {
+    key: String,
+    fields: Vec<String>,
 }
 #[derive(Debug)]
 pub struct Get {
@@ -62,31 +84,11 @@ pub struct HSet {
 pub struct HGetAll {
     key: String,
 }
-// impl From<Get> for Command {
-//     fn from(command: Get) -> Self {
-//         Command::Get(command)
-//     }
-// }
-// impl From<Set> for Command {
-//     fn from(command: Set) -> Self {
-//         Command::Set(command)
-//     }
-// }
-// impl From<HGet> for Command {
-//     fn from(command: HGet) -> Self {
-//         Command::HGet(command)
-//     }
-// }
-// impl From<HSet> for Command {
-//     fn from(command: HSet) -> Self {
-//         Command::Hset(command)
-//     }
-// }
-// impl From<HGetAll> for Command {
-//     fn from(command: HGetAll) -> Self {
-//         Command::HgetAll(command)
-//     }
-// }
+
+#[derive(Debug)]
+pub struct Echo {
+    message: String,
+}
 
 impl TryFrom<RespFrame> for Command {
     type Error = CommandError;
@@ -108,6 +110,10 @@ impl TryFrom<RespArray> for Command {
                     b"hget" => Ok(HGet::try_from(frame)?.into()),
                     b"hset" => Ok(HSet::try_from(frame)?.into()),
                     b"hgetall" => Ok(HGetAll::try_from(frame)?.into()),
+                    b"echo" => Ok(Echo::try_from(frame)?.into()),
+                    b"hmget" => Ok(HMget::try_from(frame)?.into()),
+                    b"sadd" => Ok(Sadd::try_from(frame)?.into()),
+                    b"sismember" => Ok(Sismember::try_from(frame)?.into()),
                     _ => Ok(Unrecognized.into()),
                 }
             }
@@ -120,18 +126,6 @@ impl CommandExcetor for Unrecognized {
         RESP_OK.clone()
     }
 }
-
-// impl CommandExcetor for Command {
-//     fn execute(&self, backend: &Backend) -> RespFrame {
-//         match self {
-//             Command::Get(command) => command.execute(backend),
-//             Command::Set(command) => command.execute(backend),
-//             Command::HGet(command) => command.execute(backend),
-//             Command::Hset(command) => command.execute(backend),
-//             Command::HgetAll(command) => command.execute(backend),
-//         }
-//     }
-// }
 
 fn validate_command(
     value: &RespArray,
@@ -170,4 +164,9 @@ fn validate_command(
 
 fn extract_args(value: &RespArray, start: usize) -> Result<Vec<&RespFrame>, CommandError> {
     Ok(value.iter().skip(start).collect::<Vec<&RespFrame>>())
+}
+fn extract_args_hmget(value: &RespArray) -> Result<(&RespFrame, Vec<&RespFrame>), CommandError> {
+    let key = &value[1];
+    let fields = value.iter().skip(2).collect::<Vec<&RespFrame>>();
+    Ok((key, fields))
 }
